@@ -1,0 +1,286 @@
+<div class="npc-builder-layout">
+
+  <!-- ── Tab strip (Home + this module's builder) ──────────────────────── -->
+  <div class="builder-tabs">
+    <button type="button" class="builder-tab builder-tab--home" data-tab="home">
+      <i class="fa-solid fa-house"></i> Home
+    </button>
+    <div class="builder-tab-group">
+      <button type="button" class="builder-tab builder-tab--builder" data-tab="builder">
+        <i class="{{module.icon}}"></i> {{module.label}}
+      </button>
+      <a href="{{module.githubUrl}}" target="_blank" rel="noopener noreferrer" class="builder-tab-github" title="View on GitHub" aria-label="View module on GitHub">
+        <i class="fa-brands fa-github"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Home panel (links to all 4 modules) ──────────────────────────── -->
+  <div class="home-panel" style="display:none;">
+    <div class="home-content">
+      <div class="home-logo">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <h2>CferNpcMaker — {{module.label}}</h2>
+      </div>
+
+      <!-- Getting Started / Instructions -->
+      <div class="home-instructions">
+        <div class="home-instructions-header">
+          <i class="fa-solid fa-circle-info"></i>
+          <h3>Getting Started</h3>
+        </div>
+        <ol class="home-instructions-steps">
+          <li>
+            <strong>Sign in with Patreon.</strong>
+            Click <em>Sign in with Patreon</em> in the builder to authenticate.
+          </li>
+          <li>
+            <strong>Open the <i class="{{module.icon}}"></i> {{module.label}} tab</strong> at the top of this window to reach the form.
+          </li>
+          <li>
+            <strong>Describe your {{documentNoun}}.</strong>
+            Fill in a name, level, and description — the more detail you provide, the better the result.
+          </li>
+          <li>
+            <strong>Click Generate.</strong>
+            Your new {{documentNoun}} is added to Foundry and appears in the history panel on the right.
+          </li>
+        </ol>
+        <p class="home-instructions-tip">
+          <i class="fa-solid fa-lightbulb"></i>
+          Click any past entry in the history panel to re-populate the form and tweak it.
+        </p>
+      </div>
+
+      <p class="home-intro">
+        You're using <strong>{{module.label}}</strong>. The CferNpcMaker family ships
+        a separate Foundry module for each system so each install only contains the
+        code it needs. Install any of the others to round out your toolset.
+      </p>
+
+      <div class="home-modules-grid">
+        {{#each homeModules}}
+        <div class="home-module-card {{accentClass}}{{#if isCurrent}} home-module-card--current{{/if}}">
+          <div class="home-module-icon"><i class="{{icon}}"></i></div>
+          <div class="home-module-body">
+            <div class="home-module-title">{{label}}</div>
+            <div class="home-module-desc">{{description}}</div>
+          </div>
+          <div class="home-module-cta">
+            {{#if isCurrent}}
+              <span class="home-module-current-badge"><i class="fa-solid fa-check"></i> Installed</span>
+            {{else}}
+              <a href="{{install}}" target="_blank" rel="noopener noreferrer" class="home-module-install">
+                <i class="fa-brands fa-github"></i> Install
+              </a>
+            {{/if}}
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <!-- Custom art style -->
+      <div class="home-art-style">
+        <label for="npc-art-style" class="home-art-style-label">
+          <i class="fa-solid fa-palette"></i>
+          <span>Custom Art Style</span>
+        </label>
+        <input type="text" id="npc-art-style" class="home-art-style-input"
+          placeholder="e.g. watercolor fantasy, anime, oil painting, comic book…" />
+        <span class="home-art-style-hint">
+          Specify an art style for generated NPC images. Leave blank to use the system default.
+        </span>
+      </div>
+
+      <div class="home-links">
+        <a href="https://discord.gg/6AJxmtjZvX" target="_blank" rel="noopener noreferrer" class="btn-discord">
+          <i class="fa-brands fa-discord"></i> Join our Discord
+        </a>
+        <a href="https://www.patreon.com/cw/CelestiaTools" target="_blank" rel="noopener noreferrer" class="btn-patreon-link">
+          <i class="fa-brands fa-patreon"></i> Support on Patreon
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Main builder content ─────────────────────────────────────────── -->
+  <div class="builder-inner">
+
+    <!-- Left: form panel -->
+    <div class="npc-panel-form">
+
+      <!-- Auth banner -->
+      <div class="auth-banner">
+        <div class="auth-unsigned">
+          <div class="auth-unsigned-text">
+            <i class="fa-brands fa-patreon auth-patreon-icon"></i>
+            <span>Sign in with Patreon to use this module</span>
+          </div>
+          <div class="auth-unsigned-actions">
+            <button type="button" data-action="signin" class="btn-patreon">
+              <i class="fa-brands fa-patreon"></i> Sign in with Patreon
+            </button>
+            <button type="button" data-action="patreon" class="btn-join">
+              Join Patreon
+            </button>
+          </div>
+        </div>
+        <div class="auth-signed">
+          <div class="auth-signed-status">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>Signed in via Patreon</span>
+          </div>
+          <button type="button" data-action="signout" class="btn-signout">
+            <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+          </button>
+        </div>
+      </div>
+
+      <!-- Module-specific form -->
+      <form class="npc-form settlement-form" autocomplete="off">
+
+        <div class="history-selected-banner" style="display:none;">
+          <i class="fa-solid fa-arrow-turn-up fa-rotate-90"></i>
+          <span class="history-selected-label">Editing prompt from <strong></strong> — update fields and Generate to recreate</span>
+        </div>
+
+        <div class="settlement-template-row">
+          <div class="field field--template">
+            <label for="settlement-template">Template</label>
+            <select id="settlement-template" name="template" class="settlement-template-select">
+              <option value="custom">— Custom —</option>
+              <option value="farming-village">Sleepy farming village</option>
+              <option value="river-trade-town">Bustling river-trade town</option>
+              <option value="frontier-outpost">Fortified frontier outpost</option>
+              <option value="coastal-port">Coastal fishing port</option>
+              <option value="desert-waystation">Desert caravan waystation</option>
+              <option value="dwarven-hold">Mountain dwarven hold</option>
+              <option value="elven-enclave">Elven forest enclave</option>
+              <option value="capital-city">Walled capital city</option>
+              <option value="mining-boomtown">Mining boomtown</option>
+              <option value="temple-town">Pilgrim temple-town</option>
+            </select>
+          </div>
+          <button type="button" class="btn-randomize-settlement" title="Pick a random template and roll a name">
+            <i class="fa-solid fa-dice-d20"></i> Randomize Settlement
+          </button>
+        </div>
+
+        <div class="field-row">
+          <div class="field field--name field--with-button">
+            <label for="settlement-name">Settlement Name</label>
+            <div class="input-with-button">
+              <input type="text" id="settlement-name" name="name" placeholder="e.g. Ashford" />
+              <button type="button" class="btn-roll-name" title="Roll a thematic name">
+                <i class="fa-solid fa-dice"></i>
+              </button>
+            </div>
+          </div>
+          <div class="field field--kind">
+            <label for="settlement-kind">Kind</label>
+            <select id="settlement-kind" name="kind">
+              <option value="village">Village</option>
+              <option value="town" selected>Town</option>
+              <option value="city">City</option>
+              <option value="nation">Nation</option>
+            </select>
+          </div>
+          <div class="field field--size">
+            <label for="settlement-size">Size</label>
+            <select id="settlement-size" name="size">
+              <option value="thorp">Thorp</option>
+              <option value="hamlet">Hamlet</option>
+              <option value="village">Village</option>
+              <option value="town" selected>Town</option>
+              <option value="city">City</option>
+              <option value="metropolis">Metropolis</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="settlement-biome">Biome / setting</label>
+            <input type="text" id="settlement-biome" name="biome" placeholder="e.g. coastal, mountain, forest" />
+          </div>
+          <div class="field">
+            <label for="settlement-population">Population (optional)</label>
+            <input type="number" id="settlement-population" name="populationHint" min="0" step="50" placeholder="auto" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="settlement-government">Government hint (optional)</label>
+          <input type="text" id="settlement-government" name="governmentHint" placeholder="e.g. Mayor + merchant guild" />
+        </div>
+
+        <div class="field">
+          <label for="settlement-desc">Description</label>
+          <textarea id="settlement-desc" name="description" rows="5"
+            placeholder="Describe this settlement: its mood, economy, notable features, conflicts, who lives here…"></textarea>
+          <span class="field-hint">The more detail you provide, the more textured the result.</span>
+        </div>
+
+        <div class="field-row settlement-checks">
+          <label class="checkbox-label">
+            <input type="checkbox" name="includeStores" checked />
+            <span>Generate stores</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="includeMilitary" checked />
+            <span>Generate guards / military</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="includeLeadership" checked />
+            <span>Generate leadership</span>
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" data-action="generate" class="btn-primary" disabled>
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span class="btn-label">Generate Settlement</span>
+          </button>
+          <button type="button" data-action="export" class="btn-secondary" disabled>
+            <i class="fa-solid fa-file-arrow-down"></i>
+            <span>Export JSON</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Right: history panel -->
+    <div class="npc-panel-history">
+      <div class="history-header">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <span class="history-header-label">{{module.historyLabel}}</span>
+        <button type="button" class="history-clear-btn" data-action="clearhistory" title="Clear all history entries">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+      <div class="history-search">
+        <input type="text" class="history-search-input" placeholder="Filter by name…" aria-label="Filter history by name">
+      </div>
+      <div class="history-list"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Feedback section ─────────────────────────────────────────────── -->
+  <div class="feedback-section">
+    <div class="feedback-header">
+      <i class="fa-solid fa-comment-dots"></i>
+      <span>Send Feedback</span>
+    </div>
+    <div class="feedback-body">
+      <textarea class="feedback-textarea" placeholder="Found a bug? Have a suggestion? Let us know…" rows="2"></textarea>
+      <button type="button" data-action="sendfeedback" class="feedback-send-btn">
+        <i class="fa-solid fa-paper-plane"></i>
+        <span>Send</span>
+      </button>
+    </div>
+    <div class="feedback-status" style="display:none;"></div>
+  </div>
+
+</div>
