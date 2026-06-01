@@ -15,13 +15,14 @@
     "pf2e"
   ],
   "esmodules": [
+    "scripts/preload-templates.js",
     "scripts/entry.js"
   ],
   "styles": [
     "styles/builder.css"
   ],
   "templateDir": "templates",
-  "version": "2.5.11",
+  "version": "2.5.13",
   "manifest": "https://github.com/JamesCfer/Pf2eNationsAndCitiesMaker/releases/download/latest/module.json",
   "download": "https://github.com/JamesCfer/Pf2eNationsAndCitiesMaker/releases/download/latest/Pf2eNationsAndCitiesMaker.zip"
 }
