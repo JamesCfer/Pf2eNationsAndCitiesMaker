@@ -1,12 +1,14 @@
 <div class="npc-builder-layout">
 
   <!-- ── Tab strip (Home + this module's builder) ──────────────────────── -->
-  <div class="builder-tabs">
-    <button type="button" class="builder-tab builder-tab--home" data-tab="home">
+  <div class="builder-tabs" role="tablist">
+    <button type="button" class="builder-tab builder-tab--home" data-tab="home"
+            role="tab" id="builder-tab-home" aria-selected="false" aria-controls="builder-tabpanel-home">
       <i class="fa-solid fa-house"></i> Home
     </button>
     <div class="builder-tab-group">
-      <button type="button" class="builder-tab builder-tab--builder" data-tab="builder">
+      <button type="button" class="builder-tab builder-tab--builder" data-tab="builder"
+              role="tab" id="builder-tab-builder" aria-selected="false" aria-controls="builder-tabpanel-builder">
         <i class="{{module.icon}}"></i> {{module.label}}
       </button>
       <a href="{{module.githubUrl}}" target="_blank" rel="noopener noreferrer" class="builder-tab-github" title="View on GitHub" aria-label="View module on GitHub">
@@ -16,7 +18,7 @@
   </div>
 
   <!-- ── Home panel (links to all 4 modules) ──────────────────────────── -->
-  <div class="home-panel" style="display:none;">
+  <div class="home-panel" style="display:none;" role="tabpanel" id="builder-tabpanel-home" aria-labelledby="builder-tab-home">
     <div class="home-content">
       <div class="home-logo">
         <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -110,7 +112,7 @@
   </div>
 
   <!-- ── Main builder content ─────────────────────────────────────────── -->
-  <div class="builder-inner">
+  <div class="builder-inner" role="tabpanel" id="builder-tabpanel-builder" aria-labelledby="builder-tab-builder">
 
     <!-- Left: form panel -->
     <div class="npc-panel-form">
@@ -226,6 +228,7 @@
             <option value="">— Quick template… —</option>
             <option value="A raw, fast-growing boomtown that sprang up around a fresh ore strike six months ago. Saloons and assay offices outnumber churches; the main street is churned mud, and tents jostle with hastily-built timber storefronts. Governance is loose — a committee of the three richest claim-holders calls itself the council. Claim-jumpers, desperate prospectors, and opportunistic merchants all rub elbows; violence is a nightly occurrence and the rule of law is negotiable.">Frontier mining camp</option>
             <option value="A low-lying waterfront quarter laced with canals and footbridges, built on pilings above the tideline after the old harbour silted in. Half the shopfronts open onto stilted boardwalks instead of streets, and gondoliers pole goods between them at high tide when the lower lanes flood. The air smells of brine and wet timber; eel-traps and mooring posts crowd every canal-front stoop. Flooding is routine enough that shutters double as makeshift levees, and the poorer stilt-houses lean on their neighbours for support — both literally and in the tight-knit, mutually suspicious way locals look out for their own.">Sunken canal district</option>
+            <option value="A terraced highway town strung along the switchbacks of a sacred peak, built to feed and shelter the pilgrims who pass through by the thousand each season. Hostels and shrine-lodges stack the slope in tiers, connected by stone stairways worn smooth by generations of bare and sandaled feet. Every guild here serves the pilgrim trade — porters haul luggage up the switchbacks, candle-sellers and relic-hawkers work the stairways, and the temple wardens keep order among the devout, the desperate, and the merely curious. The air smells of incense and mule-sweat, and the higher a hostel sits, the more it can charge for the view of the shrine above.">Mountain pilgrimage waystation</option>
           </select>
           <textarea id="settlement-desc" name="description" rows="5"
             placeholder="Describe this settlement: its mood, economy, notable features, conflicts, who lives here…"></textarea>
