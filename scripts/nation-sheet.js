@@ -7,6 +7,7 @@ import { MODULE_ID, FLAG_SCOPE, FLAG_KEY, getSettlement } from './constants.js';
 import { sanitizeSettlement }                              from './sanitizer.js';
 import { computeArrivalDate }                              from './army.js';
 import { gmWhisper, declareWar, negotiatePeace }             from './diplomacy.js';
+import { escapeHtml }                                        from './core/utils.js';
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -34,6 +35,11 @@ export class NationSheet extends HandlebarsApplicationMixin(ApplicationV2) {
       sendGift:        function()   { this._onSendGift(); },
       declareWar:      function()   { this._onDeclareWar(); },
       negotiatePeace:  function()   { this._onNegotiatePeace(); },
+      linkScene:       function()   { this._onLinkScene(); },
+      openScene:       function()   { this._onOpenScene(); },
+      unlinkScene:     function()   { this._onUnlinkScene(); },
+      drawBorder:      function()   { this._onDrawBorder(); },
+      clearBorder:     function()   { this._onClearBorder(); },
     },
   };
 
@@ -137,11 +143,13 @@ export class NationSheet extends HandlebarsApplicationMixin(ApplicationV2) {
       targetName: game.journal?.get(c.targetSettlementId)?.name || 'Unknown settlement',
     }));
 
+    const sceneName = nation.sceneId ? (game.scenes?.get(nation.sceneId)?.name || 'Unknown Scene') : null;
+
     return {
       doc: this.document, nation, cities, totals, availableJournals,
       otherNations, relationsView, treatiesView, vassals, availableVassalCandidates,
       suzerainDoc: suzerainDoc ? { id: suzerainDoc.id, name: suzerainDoc.name } : null,
-      claimCandidates, claimsView,
+      claimCandidates, claimsView, sceneName,
     };
   }
 
@@ -183,6 +191,14 @@ export class NationSheet extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!path) return;
     let value = ev.currentTarget.value;
     if (ev.currentTarget.type === 'number') value = Number(value);
+
+    if (path === 'borderColor') {
+      const nation = sanitizeSettlement(getSettlement(this.document) || {});
+      const scene = nation.sceneId ? game.scenes?.get(nation.sceneId) : null;
+      scene?.drawings?.get(nation.borderDrawingId)
+        ?.update({ strokeColor: value, fillColor: value }).catch(() => {});
+    }
+
     this._patch(s => foundry.utils.setProperty(s, path, value));
   }
 
@@ -356,30 +372,30 @@ export class NationSheet extends HandlebarsApplicationMixin(ApplicationV2) {
     const otherNations = (game.journal?.contents || [])
       .filter(j => j.id !== this.document.id && getSettlement(j)?.kind === 'nation')
       .map(j => ({ id: j.id, name: j.name }));
-    if (!otherNations.length) { ui.notifications?.warn?.('No other nations exist to declare war on.'); return; }
+    if (!otherNations.length) { ui.notifications?.warn?.(game.i18n.localize('PfNations.Nation.DeclareWar.NoOtherNations')); return; }
 
     const claims = nation.claims || [];
     const html = `
       <div style="display:flex;flex-direction:column;gap:0.5em;">
-        <label>Target nation
+        <label>${game.i18n.localize('PfNations.Nation.DeclareWar.TargetLabel')}
           <select name="targetId" style="width:100%;margin-top:0.25em;">
             ${otherNations.map(n => `<option value="${n.id}">${n.name}</option>`).join('')}
           </select>
         </label>
         ${claims.length ? `
         <fieldset>
-          <legend>Cite claims (optional)</legend>
+          <legend>${game.i18n.localize('PfNations.Nation.DeclareWar.ClaimsLegend')}</legend>
           ${claims.map(c => `
             <label style="display:block;">
               <input type="checkbox" name="claim" value="${c.id}" /> ${c.kind}${c.notes ? ` — ${c.notes}` : ''}
             </label>`).join('')}
-        </fieldset>` : '<p>No claims staked — this war has no formal casus belli.</p>'}
+        </fieldset>` : `<p>${game.i18n.localize('PfNations.Nation.DeclareWar.NoClaims')}</p>`}
       </div>`;
     const picked = await foundry.applications.api.DialogV2.prompt({
-      window: { title: 'Declare War' },
+      window: { title: game.i18n.localize('PfNations.Nation.DeclareWar.Title') },
       content: html,
       ok: {
-        label: 'Declare War',
+        label: game.i18n.localize('PfNations.Nation.DeclareWar.Confirm'),
         icon:  'fa-solid fa-flag-checkered',
         callback: (_e, _b, dlg) => {
           const root = dlg.element;
@@ -397,7 +413,7 @@ export class NationSheet extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!targetDoc) return;
 
     await declareWar(this.document, targetDoc, picked.claimIds);
-    ui.notifications?.info?.(`${this.document.name} has declared war on ${targetDoc.name}.`);
+    ui.notifications?.info?.(game.i18n.format('PfNations.Nation.DeclareWar.Success', { name: this.document.name, target: targetDoc.name }));
     this.render(false);
   }
 
@@ -409,19 +425,20 @@ export class NationSheet extends HandlebarsApplicationMixin(ApplicationV2) {
     const otherNations = (game.journal?.contents || [])
       .filter(j => j.id !== this.document.id && getSettlement(j)?.kind === 'nation')
       .map(j => ({ id: j.id, name: j.name }));
-    if (!otherNations.length) { ui.notifications?.warn?.('No other nations to negotiate with.'); return; }
+    if (!otherNations.length) { ui.notifications?.warn?.(game.i18n.localize('PfNations.Nation.NegotiatePeace.NoOtherNations')); return; }
 
     const claims = nation.claims || [];
+    const hostileTag = game.i18n.localize('PfNations.Nation.NegotiatePeace.HostileTag');
     const html = `
       <div style="display:flex;flex-direction:column;gap:0.5em;">
-        <label>Other party
+        <label>${game.i18n.localize('PfNations.Nation.NegotiatePeace.TargetLabel')}
           <select name="targetId" style="width:100%;margin-top:0.25em;">
-            ${otherNations.map(n => `<option value="${n.id}" ${hostileIds.has(n.id) ? 'selected' : ''}>${n.name}${hostileIds.has(n.id) ? ' (hostile)' : ''}</option>`).join('')}
+            ${otherNations.map(n => `<option value="${n.id}" ${hostileIds.has(n.id) ? 'selected' : ''}>${n.name}${hostileIds.has(n.id) ? ` (${hostileTag})` : ''}</option>`).join('')}
           </select>
         </label>
         ${claims.length ? `
         <fieldset>
-          <legend>Claims to keep (unchecked claims are given up)</legend>
+          <legend>${game.i18n.localize('PfNations.Nation.NegotiatePeace.ClaimsLegend')}</legend>
           ${claims.map(c => `
             <label style="display:block;">
               <input type="checkbox" name="keepClaim" value="${c.id}" checked /> ${c.kind}${c.notes ? ` — ${c.notes}` : ''}
@@ -429,10 +446,10 @@ export class NationSheet extends HandlebarsApplicationMixin(ApplicationV2) {
         </fieldset>` : ''}
       </div>`;
     const picked = await foundry.applications.api.DialogV2.prompt({
-      window: { title: 'Negotiate Peace' },
+      window: { title: game.i18n.localize('PfNations.Nation.NegotiatePeace.Title') },
       content: html,
       ok: {
-        label: 'Sign Peace',
+        label: game.i18n.localize('PfNations.Nation.NegotiatePeace.Confirm'),
         icon:  'fa-solid fa-dove',
         callback: (_e, _b, dlg) => {
           const root = dlg.element;
@@ -450,8 +467,91 @@ export class NationSheet extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!targetDoc) return;
 
     await negotiatePeace(this.document, targetDoc, picked.keepClaimIds);
-    ui.notifications?.info?.(`${this.document.name} has signed peace with ${targetDoc.name}.`);
+    ui.notifications?.info?.(game.i18n.format('PfNations.Nation.NegotiatePeace.Success', { name: this.document.name, target: targetDoc.name }));
     this.render(false);
+  }
+
+  /* ── world map & border overlay (#105) ─────────────────── */
+
+  async _onLinkScene() {
+    const scenes = (game.scenes?.contents || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+    if (!scenes.length) { ui.notifications?.warn?.(game.i18n.localize('PfNations.Nation.Scene.NoScenesToLink')); return; }
+    const options = scenes.map(sc => `<option value="${sc.id}">${escapeHtml(sc.name)}</option>`).join('');
+    const sceneId = await foundry.applications.api.DialogV2.prompt({
+      window: { title: game.i18n.localize('PfNations.Nation.Scene.LinkTitle') },
+      content: `<div style="display:flex;flex-direction:column;gap:0.5em;">
+        <label>${game.i18n.localize('PfNations.Nation.Scene.SceneLabel')}
+          <select name="sceneId" style="width:100%;margin-top:0.25em;">${options}</select>
+        </label>
+      </div>`,
+      ok: {
+        label: game.i18n.localize('PfNations.Nation.Scene.Confirm'),
+        callback: (_e, _b, dlg) => dlg.element.querySelector('[name="sceneId"]')?.value || null,
+      },
+      rejectClose: false,
+    }).catch(() => null);
+    if (!sceneId) return;
+    await this._patch(s => { s.sceneId = sceneId; });
+  }
+
+  _onOpenScene() {
+    const nation = sanitizeSettlement(getSettlement(this.document) || {});
+    const scene = nation.sceneId ? game.scenes?.get(nation.sceneId) : null;
+    if (!scene) { ui.notifications?.warn?.(game.i18n.localize('PfNations.Nation.Scene.NotFound')); return; }
+    scene.view();
+  }
+
+  async _onUnlinkScene() {
+    await this._patch(s => { s.sceneId = null; });
+  }
+
+  /** Lets the GM freehand-draw the nation's border on its linked world-map scene (#105). */
+  async _onDrawBorder() {
+    const nation = sanitizeSettlement(getSettlement(this.document) || {});
+    if (!nation.sceneId) { ui.notifications?.warn?.(game.i18n.localize('PfNations.Nation.DrawBorder.NoSceneLinked')); return; }
+    const scene = game.scenes?.get(nation.sceneId);
+    if (!scene) { ui.notifications?.warn?.(game.i18n.localize('PfNations.Nation.Scene.NotFound')); return; }
+
+    if (nation.borderDrawingId) {
+      await scene.drawings?.get(nation.borderDrawingId)?.delete().catch(() => {});
+    }
+
+    await scene.view();
+    try {
+      canvas.drawings?.activate();
+      ui.controls.activate({ control: 'drawings', tool: 'polygon' });
+    } catch (_) { /* control API varies by version — GM can still switch tools manually */ }
+    ui.notifications?.info?.(game.i18n.localize('PfNations.Nation.DrawBorder.Prompt'));
+
+    const nationId = this.document.id;
+    const sceneId  = scene.id;
+    const color    = nation.borderColor;
+
+    const onCreate = (drawing) => {
+      if (drawing.parent?.id !== sceneId) return;
+      clearTimeout(timeoutId);
+      Hooks.off('createDrawing', onCreate);
+      drawing.update({
+        strokeColor: color, strokeWidth: 4, strokeAlpha: 0.9,
+        fillColor: color, fillAlpha: 0.15,
+        text: this.document.name,
+        flags: { [MODULE_ID]: { nationBorder: nationId } },
+      }).catch(() => {});
+      this._patch(s => { s.borderDrawingId = drawing.id; });
+    };
+    // Stop listening after a couple of minutes so an abandoned draw doesn't
+    // mistag some unrelated later Drawing on the same scene.
+    const timeoutId = setTimeout(() => Hooks.off('createDrawing', onCreate), 120_000);
+    Hooks.on('createDrawing', onCreate);
+  }
+
+  async _onClearBorder() {
+    const nation = sanitizeSettlement(getSettlement(this.document) || {});
+    if (nation.borderDrawingId && nation.sceneId) {
+      const scene = game.scenes?.get(nation.sceneId);
+      await scene?.drawings?.get(nation.borderDrawingId)?.delete().catch(() => {});
+    }
+    await this._patch(s => { s.borderDrawingId = null; });
   }
 }
 
